@@ -15,8 +15,11 @@ class TypescriptInterface(list):
 
     def parse_type(self, dtype, comma=False):
         result = ""
+        if len(dtype) == 0:
+            return ""
         first = dtype[0]
         rest = dtype[1:]
+
         match first:
             case DBusDataTypes.INT16 | DBusDataTypes.UINT16 | \
                 DBusDataTypes.INT32 | DBusDataTypes.UINT32 | \
@@ -30,32 +33,32 @@ class TypescriptInterface(list):
 
             case DBusDataTypes.BOOLEAN:
                 result = "boolean"
-            
+             
             case DBusDataTypes.ARRAY:
-                elements = self.parse_type(rest, comma)
-                result = "Array<" + elements + ">"
+                if rest[0] == "{":
+                    result = "Map<" + self.parse_type(rest, comma) + ">"
+                else:
+                    elements = self.parse_type(rest, comma)
+                    result = "Array<" + elements + ">"
+                rest = []
+            case DBusDataTypes.VARIANT:
+                result = "any"
 
-            # case DBusDataTypes.TUPLE:
-            #     result = "["
-            #     for x in dtype:
-            #         print(x)
-            #         result = result + self.parse_type(x, comma=True)
-            #     result = result + "]"
             case "{" | "}":
                 return self.parse_type(rest, comma) 
 
-            case DBusDataTypes.VARIANT:
-                result = "any"
             case _:
                 print(first)
                 result = "unknown"
+        if rest != []:
+            result = result + "," + self.parse_type(rest, comma)
         return f'{result}{"," if comma else ""}'
 
-    def add_method(self, name, args: dict[str, str], return_type):
+    def add_method(self, name, args: dict[str, str], return_type="void"):
         func = f"{name}: ("
         for arg_name, arg_type in args.items():
             func = func + arg_name + ": " + self.parse_type(arg_type)
-        
+        func = func + ") => " + return_type
         self.append(func)
     
     def add_property(self, name, dbus_type, access="public"):
@@ -77,12 +80,18 @@ def to_typescript(data: list[str]):
             with TypescriptInterface(name) as current_class:
                 for child in interface:
                     child_type = child.tag
+                    child_name = child.attrib["name"]
+
                     match child_type:
                         case "property":
-                            prop_name = child.attrib["name"]
-                            prop_type = child.attrib["type"]
-
-                            current_class.add_property(prop_name, prop_type, access=child.attrib["access"])
-
+                            prop_type = child.attrib["type"] 
+                            current_class.add_property(child_name, prop_type, access=child.attrib["access"])
+                        case "method":
+                            args = {}
+                            for argument in child:
+                                if argument.tag != "arg":
+                                    continue
+                                args[argument.attrib["name"]] = argument.attrib["type"]
+                            current_class.add_method(child_name, args)
         classes.append("\n".join(current_class))
     return classes
