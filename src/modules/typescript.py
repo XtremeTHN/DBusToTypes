@@ -36,11 +36,11 @@ class TypescriptInterface(list):
              
             case DBusDataTypes.ARRAY:
                 if rest[0] == "{":
-                    result = "Map<" + self.parse_type(rest, comma) + ">"
+                    result = "Map<" + self.parse_type(rest, comma).strip(",") + ">"
                 else:
                     elements = self.parse_type(rest, comma)
                     result = "Array<" + elements + ">"
-                rest = []
+                rest = ""
             case DBusDataTypes.VARIANT:
                 result = "any"
 
@@ -48,16 +48,17 @@ class TypescriptInterface(list):
                 return self.parse_type(rest, comma) 
 
             case _:
-                print(first)
                 result = "unknown"
-        if rest != []:
+
+        if rest != "":
             result = result + "," + self.parse_type(rest, comma)
-        return f'{result}{"," if comma else ""}'
+        # return f'{result}{"," if comma else ""}'
+        return f'{result}'
 
     def add_method(self, name, args: dict[str, str], return_type="void"):
         func = f"{name}: ("
         for arg_name, arg_type in args.items():
-            func = func + arg_name + ": " + self.parse_type(arg_type)
+            func = func + arg_name + ": " + self.parse_type(arg_type, comma=False) + ", "
         func = func + ") => " + return_type
         self.append(func)
     
