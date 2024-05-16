@@ -1,8 +1,6 @@
-from enum import Enum
+from gi.repository import Gio
 
-from dbus import SessionBus, SystemBus
-
-class DBusDataTypes(Enum):
+class DBusDataTypes:
     INT16="n"
     UINT16="q"
     INT32="i"
@@ -20,7 +18,12 @@ class DBusDataTypes(Enum):
 
 
 def introspect(bus_name, object_path, system=False) -> str:
-    bus = SessionBus() if not system else SystemBus()
+    # bus = SessionBus() if not system else SystemBus()
 
-    obj = bus.get_object(bus_name, object_path)
-    return obj.get_dbus_method("introspect", dbus_interface="org.freedesktop.DBus.Introspectable")()
+    # obj = bus.get_object(bus_name, object_path)
+    # return obj.get_dbus_method("introspect", dbus_interface="org.freedesktop.DBus.Introspectable")()
+    
+    bus = Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SESSION if system is False else Gio.BusType.SYSTEM, 
+                                         Gio.DBusProxyFlags.NONE, None, bus_name, object_path, "org.freedesktop.DBus.Introspectable")
+    
+    return bus.Introspect()

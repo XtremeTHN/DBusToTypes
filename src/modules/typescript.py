@@ -35,18 +35,19 @@ class TypescriptInterface(list):
                 elements = self.parse_type(rest, comma)
                 result = "Array<" + elements + ">"
 
-            case DBusDataTypes.TUPLE:
-                result = "["
-                for x in dtype:
-                    print(x)
-                    result = result + self.parse_type(x, comma=True)
-                result = result + "]"
+            # case DBusDataTypes.TUPLE:
+            #     result = "["
+            #     for x in dtype:
+            #         print(x)
+            #         result = result + self.parse_type(x, comma=True)
+            #     result = result + "]"
             case "{" | "}":
                 return self.parse_type(rest, comma) 
 
             case DBusDataTypes.VARIANT:
                 result = "any"
             case _:
+                print(first)
                 result = "unknown"
         return f'{result}{"," if comma else ""}'
 
@@ -67,19 +68,21 @@ class TypescriptInterface(list):
     def end(self):
         super().append("}")
 
-def to_typescript(root: ET.Element):
+def to_typescript(data: list[str]):
     classes = ['import Gio from "gi://Gio"\n']
-    for interface in root:
-        name = interface.attrib.get("name", "Unknown").split(".")[-1]
-        with TypescriptInterface(name) as current_class:
-            for child in interface:
-                child_type = child.tag
-                match child_type:
-                    case "property":
-                        prop_name = child.attrib["name"]
-                        prop_type = child.attrib["type"]
+    for x in data:
+        xml = ET.fromstring(x)
+        for interface in xml:
+            name = interface.attrib.get("name", "Unknown").split(".")[-1]
+            with TypescriptInterface(name) as current_class:
+                for child in interface:
+                    child_type = child.tag
+                    match child_type:
+                        case "property":
+                            prop_name = child.attrib["name"]
+                            prop_type = child.attrib["type"]
 
-                        current_class.add_property(prop_name, prop_type, access=child.attrib["access"])
+                            current_class.add_property(prop_name, prop_type, access=child.attrib["access"])
 
-    classes.append("\n".join(current_class))
+        classes.append("\n".join(current_class))
     return classes
