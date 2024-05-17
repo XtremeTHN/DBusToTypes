@@ -72,16 +72,23 @@ class TypescriptInterface(list):
     def end(self):
         super().append("}")
 
-def to_typescript(data: list[str]):
+def to_typescript(data: list[str], skip_dbus_interfaces=False):
     classes = ['import Gio from "gi://Gio"\n']
     for x in data:
         xml = ET.fromstring(x)
         for interface in xml:
+            if interface.tag != "interface":
+                continue
+            
+            if skip_dbus_interfaces:
+                if interface.attrib.get("name", "") in ["org.freedesktop.DBus.Peer", "org.freedesktop.DBus.Introspectable", "org.freedesktop.DBus.Properties"]:
+                    continue
+                
             name = interface.attrib.get("name", "Unknown").split(".")[-1]
             with TypescriptInterface(name) as current_class:
                 for child in interface:
                     child_type = child.tag
-                    child_name = child.attrib["name"]
+                    child_name = child.attrib.get("name")
 
                     match child_type:
                         case "property":
@@ -89,10 +96,11 @@ def to_typescript(data: list[str]):
                             current_class.add_property(child_name, prop_type, access=child.attrib["access"])
                         case "method":
                             args = {}
-                            for argument in child:
+                            for index, argument in enumerate(child):
+                                arg_name = argument.attrib.get("name") or f"arg_{index}"
                                 if argument.tag != "arg":
                                     continue
-                                args[argument.attrib["name"]] = argument.attrib["type"]
+                                args[arg_name] = argument.attrib["type"]
                             current_class.add_method(child_name, args)
-        classes.append("\n".join(current_class))
+            classes.append("\n".join(current_class))
     return classes
