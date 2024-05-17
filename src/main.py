@@ -17,8 +17,9 @@ class Arguments:
     # source_type: str
     # file: str
     bus: str
-    object_path: str
     object_paths: list[str]
+    filter_dbus_interfaces: bool
+    
     system: str
     
     file: str
@@ -31,6 +32,7 @@ parser = argparse.ArgumentParser(prog="dbus-to-types")
 
 parser.add_argument("-b", "--bus", type=str, action="store", help="The bus name of the bus you want to introspect.")
 parser.add_argument("-p", "--object-path", "--object-paths", dest="object_paths", type=str, nargs="*", help="Introspect one or more object paths")
+parser.add_argument("-i", "--filter-dbus-interfaces", dest="filter_dbus_interfaces", action="store_true", help="Pass it if you don't want the dbus interfaces on your source output")
 parser.add_argument("-s", "--system", action="store_true", help="Use the system bus")
 
 parser.add_argument("-f", "--file", "--files", nargs="*", help="One or more already introspected dbus xml file")
@@ -64,6 +66,6 @@ if __name__ == "__main__":
 
     match args.dtype:
         case "typescript":
-            print(*to_typescript(data), sep="\n", file=args.output)
+            print(*to_typescript(data, skip_dbus_interfaces=args.filter_dbus_interfaces), sep="\n", file=args.output)
         case _:
             exit("language not implemented yet", 1)

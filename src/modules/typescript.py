@@ -41,10 +41,15 @@ class TypescriptInterface(list):
                     elements = self.parse_type(rest, comma)
                     result = "Array<" + elements + ">"
                 rest = ""
+            case DBusDataTypes.TUPLE:
+                elements = self.parse_type(rest, comma)
+                result = "[" + elements.strip(",") + "]"
+                rest = ""
+                
             case DBusDataTypes.VARIANT:
                 result = "any"
 
-            case "{" | "}":
+            case "{" | "}" | ")":
                 return self.parse_type(rest, comma) 
 
             case _:
@@ -59,7 +64,7 @@ class TypescriptInterface(list):
         func = f"{name}: ("
         for arg_name, arg_type in args.items():
             func = func + arg_name + ": " + self.parse_type(arg_type, comma=False) + ", "
-        func = func + ") => " + return_type
+        func = func.strip(", ") + ") => " + return_type
         self.append(func)
     
     def add_property(self, name, dbus_type, access="public"):
@@ -84,7 +89,7 @@ def to_typescript(data: list[str], skip_dbus_interfaces=False):
                 if interface.attrib.get("name", "") in ["org.freedesktop.DBus.Peer", "org.freedesktop.DBus.Introspectable", "org.freedesktop.DBus.Properties"]:
                     continue
                 
-            name = interface.attrib.get("name", "Unknown").split(".")[-1]
+            name = interface.attrib.get("name", "Unknown").split(".")[-1].title()
             with TypescriptInterface(name) as current_class:
                 for child in interface:
                     child_type = child.tag
