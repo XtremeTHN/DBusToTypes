@@ -4,9 +4,11 @@ from modules.dbus import DBusDataTypes
 class TypescriptInterface(list):
     def __init__(self, name: str, child_indentation=1):
         super().__init__()
-        
-        super().append("export interface " + name.strip() + " extends Gio.DBusProxy {")
+        class_name = name.strip()
+        super().append("export interface " + class_name + " extends Gio.DBusProxy {")
         self.child_indentation = "\t" * child_indentation
+        self.append(f"new(...args: unknown[]) => {class_name}")
+        
     def __enter__(self):
         return self
 
@@ -41,6 +43,7 @@ class TypescriptInterface(list):
                     elements = self.parse_type(rest, comma)
                     result = "Array<" + elements + ">"
                 rest = ""
+                
             case DBusDataTypes.TUPLE:
                 elements = self.parse_type(rest, comma)
                 result = "[" + elements.strip(",") + "]"
